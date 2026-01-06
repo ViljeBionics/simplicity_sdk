@@ -30,6 +30,7 @@ sl_bt_msg_t *sl_bt_rsp_msg = &_sl_bt_rsp_msg;
 void (*sl_bt_api_output)(uint32_t len1, uint8_t* data1);
 int32_t (*sl_bt_api_input)(uint32_t len1, uint8_t* data1);
 int32_t (*sl_bt_api_peek)(void);
+uint32_t (*getTick)(void);
 uint8_t _sl_bt_queue_buffer[SL_BT_API_QUEUE_LEN * (SL_BGAPI_MSG_HEADER_LEN + SL_BGAPI_MAX_PAYLOAD_SIZE)];
 
 bgapi_device_type_queue_t sl_bt_api_queue = {
@@ -39,6 +40,8 @@ bgapi_device_type_queue_t sl_bt_api_queue = {
   (sl_bt_msg_t *)_sl_bt_queue_buffer,
   SL_BT_API_QUEUE_LEN
 };
+
+uint32_t _timeout_response = 0;
 
 sl_status_t sli_bgapi_register_device(bgapi_device_type_queue_t *queue)
 {
@@ -53,7 +56,7 @@ sl_status_t sli_bgapi_register_device(bgapi_device_type_queue_t *queue)
   return SL_STATUS_ALREADY_INITIALIZED;
 }
 
-sl_status_t sl_bt_api_initialize(tx_func ofunc, rx_func ifunc)
+sl_status_t sl_bt_api_initialize(tx_func ofunc, rx_func ifunc, get_tick_func tick_func, uint32_t timeout_response)
 {
   if (!ofunc || !ifunc) {
     return SL_STATUS_INVALID_PARAMETER;
@@ -61,10 +64,12 @@ sl_status_t sl_bt_api_initialize(tx_func ofunc, rx_func ifunc)
   sl_bt_api_output = ofunc;
   sl_bt_api_input = ifunc;
   sl_bt_api_peek = NULL;
+  getTick = tick_func;
+  _timeout_response = timeout_response;
   return sli_bgapi_register_device(&sl_bt_api_queue);
 }
 
-sl_status_t sl_bt_api_initialize_nonblock(tx_func ofunc, rx_func ifunc, rx_peek_func pfunc)
+sl_status_t sl_bt_api_initialize_nonblock(tx_func ofunc, rx_func ifunc, rx_peek_func pfunc, get_tick_func tick_func, uint32_t timeout_response)
 {
   if (!ofunc || !ifunc || !pfunc) {
     return SL_STATUS_INVALID_PARAMETER;
@@ -72,6 +77,8 @@ sl_status_t sl_bt_api_initialize_nonblock(tx_func ofunc, rx_func ifunc, rx_peek_
   sl_bt_api_output = ofunc;
   sl_bt_api_input = ifunc;
   sl_bt_api_peek = pfunc;
+  getTick = tick_func;
+  _timeout_response = timeout_response;
   return sli_bgapi_register_device(&sl_bt_api_queue);
 }
 
@@ -267,12 +274,16 @@ sl_status_t sl_bt_pop_event(sl_bt_msg_t* event)
 sl_bt_msg_t* sl_bt_wait_response(void)
 {
   sl_bt_msg_t* rsp;
-  while (1) {
+  uint32_t start_tick = getTick();
+  while ((getTick() - start_tick < _timeout_response)
+		  || !_timeout_response) {
     rsp = sli_wait_for_bgapi_message(sl_bt_rsp_msg); // Will return a valid pointer only if we got a response.
     if (rsp) {
       return rsp;
     }
   }
+  sl_bt_rsp_msg->header = 0;
+  return NULL;
 }
 
 void sl_bt_host_handle_command()

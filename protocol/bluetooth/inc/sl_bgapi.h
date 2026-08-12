@@ -20,7 +20,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "sl_status.h"
-#include "sl_bgapi_config.h"
+#include "Vil/Plexus/sl_bgapi_config.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -135,13 +135,20 @@ typedef int32_t(*rx_func)(uint32_t dataLength, uint8_t* data);
 typedef int32_t(*rx_peek_func)(void);
 
 /**
+ * @brief  Returns the current tick.
+ * @return Time tick.
+ */
+typedef uint32_t(*get_tick_func)(void);
+
+/**
  * Initialize NCP host Bluetooth API.
  *
  * @param ofunc The function for sending api messages
  * @param ifunc The function for receiving api messages
+ * @param timeout_response The timeout which will be used when waiting for a reply
  * @return Status code
  */
-sl_status_t sl_bt_api_initialize(tx_func ofunc, rx_func ifunc);
+sl_status_t sl_bt_api_initialize(tx_func ofunc, rx_func ifunc, get_tick_func tick_func, uint32_t timeout_response);
 
 /**
  * Initialize NCP host Bluetooth API.
@@ -149,9 +156,10 @@ sl_status_t sl_bt_api_initialize(tx_func ofunc, rx_func ifunc);
  * @param ofunc The function for sending api messages
  * @param ifunc The function for receiving api messages
  * @param pfunc The function for getting the number of bytes in the input buffer
+ * @param timeout_response The timeout which will be used when waiting for a reply
  * @return Status code
  */
-sl_status_t sl_bt_api_initialize_nonblock(tx_func ofunc, rx_func ifunc, rx_peek_func pfunc);
+sl_status_t sl_bt_api_initialize_nonblock(tx_func ofunc, rx_func ifunc, rx_peek_func pfunc, get_tick_func tick_func, uint32_t timeout_response);
 
 extern void(*sl_bt_api_output)(uint32_t len1, uint8_t* data1);
 extern int32_t (*sl_bt_api_input)(uint32_t len1, uint8_t* data1);
